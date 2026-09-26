@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ScamShield — AI Scam Verifier</title>
+  <style>
+    /* ── Variables ────────────────────────────────────────────────────── */
+    :root {
+      --bg:         #0d0f14;
+      --surface:    #13161e;
+      --surface-2:  #1a1e2a;
+      --border:     #252a38;
+      --border-hi:  #2e3447;
+      --text:       #e8eaf0;
+      --text-muted: #7a8099;
+      --text-dim:   #4a5068;
+      --accent:     #4f8ef7;
+      --accent-dim: #1e3a6e;
+      --red:        #f05252;
+      --red-dim:    #3d1a1a;
+      --red-border: #7a2a2a;
+      --amber:      #f5a623;
+      --amber-dim:  #3d2a0a;
+      --amber-border:#7a5010;
+      --green:      #34d399;
+      --green-dim:  #0a2e20;
+      --green-border:#1a5c3a;
+      --radius:     14px;
+      --radius-sm:  8px;
+    }
+
+    /* ── Reset ────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 3rem 1rem 4rem;
+      line-height: 1.6;
+    }
+
+    /* ── Top nav bar ──────────────────────────────────────────────────── */
+    .topbar {
+      width: 100%;
+      max-width: 720px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 3rem;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+    }
+    .logo-text {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--text);
+    }
+    .logo-text span { color: var(--accent); }
+    .badge-ai {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid var(--accent-dim);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    /* ── Hero ─────────────────────────────────────────────────────────── */
+    .hero {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      max-width: 560px;
+    }
+    .hero h1 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.15;
+      color: var(--text);
+    }
+    .hero h1 em {
+      font-style: normal;
+      color: var(--accent);
+    }
+    .hero p {
+      margin-top: 0.75rem;
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    /* ── Main card ────────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      width: 100%;
+      max-width: 720px;
+    }
+
+    /* ── Input area ───────────────────────────────────────────────────── */
+    .input-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 0.6rem;
+    }
+    .input-label .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 150px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.1rem;
+      font-size: 0.95rem;
+      font-family: inherit;
+      resize: vertical;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      line-height: 1.6;
+    }
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79,142,247,0.12);
+    }
+    textarea::placeholder { color: var(--text-dim); }
+
+    /* ── Hint row ─────────────────────────────────────────────────────── */
+    .hint-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 0.5rem;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+    }
+
+    /* ── Analyze button ───────────────────────────────────────────────── */
+    #analyzeBtn {
+      margin-top: 1.1rem;
+      width: 100%;
+      padding: 0.85rem 1rem;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 700;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: background 0.15s, opacity 0.15s, transform 0.1s;
+      position: relative;
+      overflow: hidden;
+    }
+    #analyzeBtn:hover:not(:disabled) {
+      background: #3d7ae8;
+      transform: translateY(-1px);
+    }
+    #analyzeBtn:active:not(:disabled) { transform: translateY(0); }
+    #analyzeBtn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ── Loading ──────────────────────────────────────────────────────── */
+    .spinner-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      letter-spacing: 0.02em;
+    }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid var(--border-hi);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .hidden { display: none !important; }
+
+    /* ── Divider ──────────────────────────────────────────────────────── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 1.75rem 0;
+    }
+
+    /* ── Result card ──────────────────────────────────────────────────── */
+    #resultCard { animation: fadeUp 0.3s ease; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Verdict banner */
+    .verdict-banner {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.1rem 1.25rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid;
+    }
+    .verdict-banner.high   { background: var(--red-dim);   border-color: var(--red-border);   }
+    .verdict-banner.medium { background: var(--amber-dim); border-color: var(--amber-border); }
+    .verdict-banner.safe   { background: var(--green-dim); border-color: var(--green-border); }
+
+    .verdict-icon {
+      font-size: 1.6rem;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .verdict-text-wrap { flex: 1; }
+    .verdict-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      opacity: 0.7;
+      margin-bottom: 0.1rem;
+    }
+    .verdict-value {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+    }
+    .verdict-banner.high   .verdict-value,
+    .verdict-banner.high   .verdict-label  { color: var(--red);   }
+    .verdict-banner.medium .verdict-value,
+    .verdict-banner.medium .verdict-label  { color: var(--amber); }
+    .verdict-banner.safe   .verdict-value,
+    .verdict-banner.safe   .verdict-label  { color: var(--green); }
+
+    /* Score chip */
+    .score-chip {
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .score-chip .score-num {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .score-chip .score-denom {
+      font-size: 0.75rem;
+      opacity: 0.5;
+      font-weight: 600;
+    }
+    .verdict-banner.high   .score-num { color: var(--red);   }
+    .verdict-banner.medium .score-num { color: var(--amber); }
+    .verdict-banner.safe   .score-num { color: var(--green); }
+
+    /* Score bar */
+    .score-bar-wrap {
+      margin-top: 1rem;
+      background: var(--surface-2);
+      border-radius: 999px;
+      height: 5px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .score-bar {
+      height: 100%;
+      border-radius: 999px;
+      width: 0%;
+      transition: width 0.6s cubic-bezier(0.16,1,0.3,1);
+    }
+    .score-bar.high   { background: var(--red);   }
+    .score-bar.medium { background: var(--amber); }
+    .score-bar.safe   { background: var(--green); }
+
+    /* Section headers */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1.5rem;
+      margin-bottom: 0.75rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+    }
+    .section-header::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* Reasons list */
+    .reasons-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .reasons-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.65rem;
+      font-size: 0.91rem;
+      color: var(--text);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.65rem 0.9rem;
+      line-height: 1.5;
+    }
+    .reasons-list li::before {
+      content: "›";
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 1rem;
+      line-height: 1.4;
+      flex-shrink: 0;
+    }
+    .no-reasons {
+      font-size: 0.88rem;
+      color: var(--text-dim);
+      font-style: italic;
+      padding: 0.5rem 0;
+    }
+
+    /* URL block */
+    .url-block {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .url-block .url-domain {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      word-break: break-all;
+      flex: 1;
+      min-width: 0;
+    }
+    .url-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.25rem 0.7rem;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      flex-shrink: 0;
+      border: 1px solid;
+    }
+    .url-pill::before { content: "●"; font-size: 0.5rem; }
+    .url-pill.known-safe { background: var(--green-dim); color: var(--green); border-color: var(--green-border); }
+    .url-pill.suspicious { background: var(--red-dim);   color: var(--red);   border-color: var(--red-border);   }
+    .url-pill.unknown    { background: var(--amber-dim); color: var(--amber); border-color: var(--amber-border); }
+
+    /* Error message */
+    #errorMsg {
+      margin-top: 1rem;
+      padding: 0.8rem 1rem;
+      border-radius: var(--radius-sm);
+      background: var(--red-dim);
+      color: var(--red);
+      font-size: 0.88rem;
+      border: 1px solid var(--red-border);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    #errorMsg::before { content: "⚠"; font-size: 0.9rem; flex-shrink: 0; }
+
+    /* ── Stats row ────────────────────────────────────────────────────── */
+    .stats-row {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .stat-chip {
+      flex: 1;
+      min-width: 120px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem 1rem;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+    .stat-chip strong {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* ── Footer ───────────────────────────────────────────────────────── */
+    footer {
+      margin-top: 3rem;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      align-items: center;
+    }
+    footer .footer-links {
+      display: flex;
+      gap: 1.25rem;
+    }
+    footer span { opacity: 0.5; }
+  </style>
+</head>
+<body>
+
+  <!-- ── Top nav ──────────────────────────────────────────────────────── -->
+  <nav class="topbar">
+    <div class="logo">
+      <div class="logo-icon">🛡</div>
+      <span class="logo-text">Scam<span>Shield</span></span>
+    </div>
+    <span class="badge-ai">AI Powered</span>
+  </nav>
+
+  <!-- ── Hero ─────────────────────────────────────────────────────────── -->
+  <div class="hero">
+    <h1>Is this message a <em>scam?</em></h1>
+    <p>Paste any suspicious SMS, email, or link. Our AI analyzes it for threats, lookalike URLs, and fraud patterns in seconds.</p>
+  </div>
+
+  <!-- ── Main card ─────────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="input-label">
+      <span class="dot"></span>
+      Message or URL to analyze
+    </div>
+    <textarea
+      id="messageInput"
+      placeholder="Paste a suspicious message here — e.g. &quot;Dear customer, your MSEDCL bill is overdue. Pay now or your connection will be cut: http://msedcl-pay.site&quot;"
+    ></textarea>
+    <div class="hint-row">
+      <span>Supports SMS, email snippets, and raw URLs</span>
+      <span>Ctrl + Enter to analyze</span>
+    </div>
+
+    <button id="analyzeBtn" onclick="analyzeMessage()">Analyze Message</button>
+
+    <!-- Loading -->
+    <div id="loadingSpinner" class="spinner-wrap hidden">
+      <div class="spinner"></div>
+      <span>Running AI analysis &amp; URL checks…</span>
+    </div>
+
+    <!-- Error -->
+    <div id="errorMsg" class="hidden"></div>
+
+    <!-- ── Result ─────────────────────────────────────────────────────── -->
+    <div id="resultCard" class="hidden">
+      <hr class="divider" />
+
+      <!-- Verdict banner -->
+      <div id="verdictBanner" class="verdict-banner">
+        <div id="verdictIcon" class="verdict-icon"></div>
+        <div class="verdict-text-wrap">
+          <div class="verdict-label">Verdict</div>
+          <div id="verdictValue" class="verdict-value"></div>
+        </div>
+        <div class="score-chip">
+          <div id="scoreValue" class="score-num"></div>
+          <div class="score-denom">/ 100</div>
+        </div>
+      </div>
+
+      <!-- Score bar -->
+      <div class="score-bar-wrap">
+        <div id="scoreBar" class="score-bar"></div>
+      </div>
+
+      <!-- Quick stats row -->
+      <div class="stats-row">
+        <div class="stat-chip">
+          <span>Text analysis</span>
+          <strong id="statText">—</strong>
+        </div>
+        <div class="stat-chip">
+          <span>URL detected</span>
+          <strong id="statUrl">—</strong>
+        </div>
+        <div class="stat-chip">
+          <span>URL status</span>
+          <strong id="statUrlStatus">—</strong>
+        </div>
+      </div>
+
+      <!-- Reasons -->
+      <div class="section-header">Detection details</div>
+      <ul id="reasonsList" class="reasons-list"></ul>
+      <div id="noReasons" class="no-reasons hidden">No specific patterns identified. Message appears clean.</div>
+
+      <!-- URL block -->
+      <div id="urlSection" class="hidden">
+        <div class="section-header">URL found</div>
+        <div class="url-block">
+          <div id="urlValue" class="url-domain"></div>
+          <span id="urlPill" class="url-pill"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Footer ────────────────────────────────────────────────────────── -->
+  <footer>
+    <span>ScamShield — AI-powered fraud detection. For awareness only, not legal advice.</span>
+  </footer>
+
+  <script>
+    const API_BASE = "http://127.0.0.1:8000";
+
+    async function analyzeMessage() {
+      const message = document.getElementById("messageInput").value.trim();
+
+      if (!message) {
+        showError("Please paste a message to analyze.");
+        return;
+      }
+
+      hideError();
+      setLoading(true);
+      document.getElementById("resultCard").classList.add("hidden");
+
+      try {
+        const response = await fetch(`${API_BASE}/analyze`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message }),
+        });
+
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.detail || `Server error: ${response.status}`);
+        }
+
+        renderResult(await response.json());
+
+      } catch (err) {
+        showError(
+          err.message.includes("Failed to fetch")
+            ? "Could not reach the backend. Make sure the server is running on port 8000."
+            : `Error: ${err.message}`
+        );
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    document.getElementById("messageInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && e.ctrlKey) analyzeMessage();
+    });
+
+    /* ── Render ──────────────────────────────────────────────────────── */
+    function renderResult(data) {
+      const { verdict, score, reasons, url_found, url_status } = data;
+
+      const cls  = verdict === "HIGH RISK" ? "high" : verdict === "MEDIUM RISK" ? "medium" : "safe";
+      const icon = verdict === "HIGH RISK" ? "🚨" : verdict === "MEDIUM RISK" ? "⚠️" : "✅";
+
+      // Verdict banner
+      const banner = document.getElementById("verdictBanner");
+      banner.className = `verdict-banner ${cls}`;
+      document.getElementById("verdictIcon").textContent  = icon;
+      document.getElementById("verdictValue").textContent = verdict;
+      document.getElementById("scoreValue").textContent   = score;
+
+      // Score bar
+      const bar = document.getElementById("scoreBar");
+      bar.className = `score-bar ${cls}`;
+      setTimeout(() => { bar.style.width = `${score}%`; }, 60);
+
+      // Quick stats
+      const textFlag = reasons && reasons.length > 0;
+      document.getElementById("statText").textContent = textFlag ? "Patterns found" : "No patterns";
+      document.getElementById("statText").style.color = textFlag ? "var(--red)" : "var(--green)";
+
+      document.getElementById("statUrl").textContent = url_found ? "Yes" : "None";
+      document.getElementById("statUrl").style.color = url_found ? "var(--amber)" : "var(--text-muted)";
+
+      const statusLabels = { "known-safe": "✓ Known Safe", "suspicious": "✗ Suspicious", "unknown": "? Unknown" };
+      const statusColors = { "known-safe": "var(--green)", "suspicious": "var(--red)", "unknown": "var(--amber)" };
+      document.getElementById("statUrlStatus").textContent = url_status ? (statusLabels[url_status] || url_status) : "N/A";
+      document.getElementById("statUrlStatus").style.color = url_status ? (statusColors[url_status] || "var(--text-muted)") : "var(--text-dim)";
+
+      // Reasons
+      const list = document.getElementById("reasonsList");
+      const noReasons = document.getElementById("noReasons");
+      list.innerHTML = "";
+      if (reasons && reasons.length > 0) {
+        noReasons.classList.add("hidden");
+        reasons.forEach((r) => {
+          const li = document.createElement("li");
+          li.textContent = r;
+          list.appendChild(li);
+        });
+      } else {
+        noReasons.classList.remove("hidden");
+      }
+
+      // URL block
+      const urlSection = document.getElementById("urlSection");
+      if (url_found) {
+        urlSection.classList.remove("hidden");
+        document.getElementById("urlValue").textContent = url_found;
+        const pill = document.getElementById("urlPill");
+        const pillMap = {
+          "known-safe": { label: "Known Safe", cls: "known-safe" },
+          "suspicious":  { label: "Suspicious",  cls: "suspicious" },
+          "unknown":     { label: "Unknown",      cls: "unknown" },
+        };
+        const p = pillMap[url_status] || { label: url_status || "—", cls: "unknown" };
+        pill.className = `url-pill ${p.cls}`;
+        pill.textContent = p.label;
+      } else {
+        urlSection.classList.add("hidden");
+      }
+
+      document.getElementById("resultCard").classList.remove("hidden");
+      document.getElementById("resultCard").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function setLoading(on) {
+      const btn = document.getElementById("analyzeBtn");
+      btn.disabled = on;
+      btn.textContent = on ? "Analyzing…" : "Analyze Message";
+      document.getElementById("loadingSpinner").classList.toggle("hidden", !on);
+    }
+
+    function showError(msg) {
+      const el = document.getElementById("errorMsg");
+      el.textContent = msg;
+      el.classList.remove("hidden");
+    }
+
+    function hideError() {
+      document.getElementById("errorMsg").classList.add("hidden");
+    }
+  </script>
+</body>
+</html>

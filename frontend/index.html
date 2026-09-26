@@ -5,691 +5,841 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ScamShield — AI Scam Verifier</title>
   <style>
-    /* ── Variables ────────────────────────────────────────────────────── */
+    /* ── Design tokens ─────────────────────────────────────────────── */
     :root {
-      --bg:         #0d0f14;
-      --surface:    #13161e;
-      --surface-2:  #1a1e2a;
-      --border:     #252a38;
-      --border-hi:  #2e3447;
-      --text:       #e8eaf0;
-      --text-muted: #7a8099;
-      --text-dim:   #4a5068;
-      --accent:     #4f8ef7;
-      --accent-dim: #1e3a6e;
-      --red:        #f05252;
-      --red-dim:    #3d1a1a;
-      --red-border: #7a2a2a;
-      --amber:      #f5a623;
-      --amber-dim:  #3d2a0a;
-      --amber-border:#7a5010;
-      --green:      #34d399;
-      --green-dim:  #0a2e20;
-      --green-border:#1a5c3a;
-      --radius:     14px;
-      --radius-sm:  8px;
+      --bg:           #080b12;
+      --surface:      #0f1623;
+      --surface-2:    #141c2e;
+      --surface-3:    #1a2238;
+      --border:       #1f2d48;
+      --border-hi:    #2a3d60;
+      --text:         #dde4f0;
+      --text-sub:     #8898bb;
+      --text-dim:     #3d4f6e;
+      --accent:       #3b8ef3;
+      --accent-dim:   #1e3a6e;
+      --accent-glow:  rgba(59,142,243,0.15);
+      --accent-hover: #2d7de0;
+      --red:          #f04f5a;
+      --red-bg:       #1f0d10;
+      --red-border:   #6b2028;
+      --amber:        #f5a623;
+      --amber-bg:     #1f1508;
+      --amber-border: #6b4208;
+      --green:        #2fd896;
+      --green-bg:     #081f14;
+      --green-border: #0f5c35;
+      --r:            14px;
+      --r-sm:         9px;
+      --r-xs:         5px;
     }
-
-    /* ── Reset ────────────────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+    html { scroll-behavior: smooth; }
     body {
       font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 3rem 1rem 4rem;
       line-height: 1.6;
+      background-image:
+        linear-gradient(rgba(59,142,243,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59,142,243,0.025) 1px, transparent 1px);
+      background-size: 40px 40px;
     }
-
-    /* ── Top nav bar ──────────────────────────────────────────────────── */
-    .topbar {
-      width: 100%;
-      max-width: 720px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 3rem;
-    }
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-    }
-    .logo-icon {
-      width: 36px; height: 36px;
-      background: var(--accent-dim);
-      border: 1px solid var(--accent);
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.1rem;
-    }
-    .logo-text {
-      font-size: 1.15rem;
-      font-weight: 700;
-      letter-spacing: -0.3px;
-      color: var(--text);
-    }
-    .logo-text span { color: var(--accent); }
-    .badge-ai {
-      font-size: 0.7rem;
-      font-weight: 600;
-      padding: 0.2rem 0.55rem;
-      border-radius: 999px;
-      background: var(--accent-dim);
-      color: var(--accent);
-      border: 1px solid var(--accent-dim);
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-
-    /* ── Hero ─────────────────────────────────────────────────────────── */
-    .hero {
-      text-align: center;
-      margin-bottom: 2.5rem;
-      max-width: 560px;
-    }
-    .hero h1 {
-      font-size: 2.4rem;
-      font-weight: 800;
-      letter-spacing: -1px;
-      line-height: 1.15;
-      color: var(--text);
-    }
-    .hero h1 em {
-      font-style: normal;
-      color: var(--accent);
-    }
-    .hero p {
-      margin-top: 0.75rem;
-      color: var(--text-muted);
-      font-size: 1rem;
-    }
-
-    /* ── Main card ────────────────────────────────────────────────────── */
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 2rem;
-      width: 100%;
-      max-width: 720px;
-    }
-
-    /* ── Input area ───────────────────────────────────────────────────── */
-    .input-label {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      margin-bottom: 0.6rem;
-    }
-    .input-label .dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--accent);
-    }
-
-    textarea {
-      width: 100%;
-      min-height: 150px;
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 1rem 1.1rem;
-      font-size: 0.95rem;
-      font-family: inherit;
-      resize: vertical;
-      color: var(--text);
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-      line-height: 1.6;
-    }
-    textarea:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(79,142,247,0.12);
-    }
-    textarea::placeholder { color: var(--text-dim); }
-
-    /* ── Hint row ─────────────────────────────────────────────────────── */
-    .hint-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-top: 0.5rem;
-      font-size: 0.78rem;
-      color: var(--text-dim);
-    }
-
-    /* ── Analyze button ───────────────────────────────────────────────── */
-    #analyzeBtn {
-      margin-top: 1.1rem;
-      width: 100%;
-      padding: 0.85rem 1rem;
-      background: var(--accent);
-      color: #fff;
-      font-size: 0.95rem;
-      font-weight: 700;
-      border: none;
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      letter-spacing: 0.02em;
-      transition: background 0.15s, opacity 0.15s, transform 0.1s;
-      position: relative;
-      overflow: hidden;
-    }
-    #analyzeBtn:hover:not(:disabled) {
-      background: #3d7ae8;
-      transform: translateY(-1px);
-    }
-    #analyzeBtn:active:not(:disabled) { transform: translateY(0); }
-    #analyzeBtn:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    /* ── Loading ──────────────────────────────────────────────────────── */
-    .spinner-wrap {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.75rem;
-      margin-top: 1.5rem;
-      color: var(--text-muted);
-      font-size: 0.88rem;
-      letter-spacing: 0.02em;
-    }
-    .spinner {
-      width: 18px; height: 18px;
-      border: 2px solid var(--border-hi);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.65s linear infinite;
-      flex-shrink: 0;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .page { max-width: 720px; margin: 0 auto; padding: 0 1.25rem 5rem; }
     .hidden { display: none !important; }
 
-    /* ── Divider ──────────────────────────────────────────────────────── */
-    .divider {
-      border: none;
-      border-top: 1px solid var(--border);
-      margin: 1.75rem 0;
+    /* ── Header ─────────────────────────────────────────────────────── */
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.75rem 0 0;
+    }
+    .logo { display: flex; align-items: center; gap: 0.65rem; text-decoration: none; }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg,#1a3a6e,#0d2044);
+      border: 1px solid var(--border-hi); border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 10px rgba(59,142,243,0.18);
+    }
+    .logo-name { font-size: 1.15rem; font-weight: 800; letter-spacing: -0.4px; }
+    .logo-name em { font-style: normal; color: var(--accent); }
+    .header-right { font-size: 0.72rem; color: var(--text-dim); }
+
+    /* ── Hero ────────────────────────────────────────────────────────── */
+    .hero { text-align: center; padding: 3.5rem 0 2.25rem; }
+    .hero h1 {
+      font-size: clamp(1.85rem, 5vw, 2.6rem);
+      font-weight: 900; letter-spacing: -1.5px; line-height: 1.1;
+    }
+    .hero h1 span { color: var(--accent); }
+    .hero-sub { margin-top: 0.85rem; font-size: 0.95rem; color: var(--text-sub); }
+
+    /* ── Mode tabs (Single / Batch) ─────────────────────────────────── */
+    /* ── Card ────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 1.75rem;
+      box-shadow: 0 4px 40px rgba(0,0,0,0.35);
     }
 
-    /* ── Result card ──────────────────────────────────────────────────── */
-    #resultCard { animation: fadeUp 0.3s ease; }
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(10px); }
+    /* ── Message type selector ──────────────────────────────────────── */
+    .type-row {
+      display: flex; align-items: center; gap: 0.6rem;
+      margin-bottom: 1rem;
+    }
+    .type-btn {
+      display: flex; align-items: center; gap: 0.4rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 999px; border: 1px solid var(--border);
+      background: var(--surface-2); color: var(--text-sub);
+      font-size: 0.78rem; font-weight: 600; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .type-btn.active {
+      background: var(--accent-dim); border-color: var(--accent); color: var(--accent);
+    }
+    .type-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    /* ── Email sender field ─────────────────────────────────────────── */
+    #emailSenderWrap { margin-bottom: 0.85rem; }
+    .field-label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-sub); margin-bottom: 0.45rem;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .field-label-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+    input[type="email"], input[type="text"] {
+      width: 100%; background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 0.7rem 0.9rem;
+      font-size: 0.88rem; font-family: inherit; color: var(--text); outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    input::placeholder { color: var(--text-dim); }
+
+    /* ── Textarea ────────────────────────────────────────────────────── */
+    textarea {
+      width: 100%; min-height: 140px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 0.9rem 1rem;
+      font-size: 0.9rem; font-family: inherit; color: var(--text);
+      resize: vertical; outline: none; line-height: 1.65;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    textarea::placeholder { color: var(--text-dim); }
+
+    .input-meta {
+      display: flex; justify-content: space-between; margin-top: 0.45rem;
+      font-size: 0.7rem; color: var(--text-dim);
+    }
+
+    /* ── Analyze button ─────────────────────────────────────────────── */
+    .analyze-btn {
+      margin-top: 1rem; width: 100%; padding: 0.85rem 1.25rem;
+      background: var(--accent); color: #fff;
+      font-size: 0.92rem; font-weight: 700; letter-spacing: 0.02em;
+      border: none; border-radius: var(--r-sm); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 0.6rem;
+      transition: background 0.18s, transform 0.1s, box-shadow 0.18s;
+      box-shadow: 0 2px 12px rgba(59,142,243,0.3);
+      position: relative; overflow: hidden;
+    }
+    .analyze-btn::after {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(rgba(255,255,255,0.07),transparent); pointer-events: none;
+    }
+    .analyze-btn:hover:not(:disabled) { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 18px rgba(59,142,243,0.4); }
+    .analyze-btn:active:not(:disabled) { transform: translateY(0); }
+    .analyze-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-arrow { flex-shrink: 0; transition: transform 0.18s; }
+    .analyze-btn:hover:not(:disabled) .btn-arrow { transform: translateX(2px); }
+    .spinner {
+      width: 15px; height: 15px; border: 2px solid rgba(255,255,255,0.25);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin 0.65s linear infinite; flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Validation / Error ─────────────────────────────────────────── */
+    .inline-msg {
+      margin-top: 0.65rem; font-size: 0.8rem;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .inline-msg.warn { color: var(--amber); }
+    .inline-msg.err {
+      padding: 0.7rem 0.9rem; border-radius: var(--r-sm);
+      background: var(--red-bg); border: 1px solid var(--red-border); color: var(--red);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       INVESTIGATION REPORT
+    ═══════════════════════════════════════════════════════════════ */
+    #reportCard {
+      margin-top: 1.1rem;
+      animation: slideUp 0.28s cubic-bezier(0.16,1,0.3,1) both;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(12px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    /* Verdict banner */
-    .verdict-banner {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 1.1rem 1.25rem;
-      border-radius: var(--radius-sm);
-      border: 1px solid;
+    /* ── Verdict banner ─────────────────────────────────────────────── */
+    .verdict-wrap {
+      border-radius: var(--r-sm); border: 1px solid; overflow: hidden;
     }
-    .verdict-banner.high   { background: var(--red-dim);   border-color: var(--red-border);   }
-    .verdict-banner.medium { background: var(--amber-dim); border-color: var(--amber-border); }
-    .verdict-banner.safe   { background: var(--green-dim); border-color: var(--green-border); }
+    .verdict-wrap.high   { border-color: var(--red-border);   background: var(--red-bg);   }
+    .verdict-wrap.medium { border-color: var(--amber-border); background: var(--amber-bg); }
+    .verdict-wrap.safe   { border-color: var(--green-border); background: var(--green-bg); }
+    .verdict-top { display: flex; align-items: center; gap: 1rem; padding: 1.1rem 1.3rem; }
+    .verdict-icon-box {
+      width: 44px; height: 44px; border-radius: 11px;
+      display: flex; align-items: center; justify-content: center; font-size: 1.35rem; flex-shrink: 0;
+    }
+    .verdict-wrap.high   .verdict-icon-box { background: rgba(240,79,90,0.15); }
+    .verdict-wrap.medium .verdict-icon-box { background: rgba(245,166,35,0.15); }
+    .verdict-wrap.safe   .verdict-icon-box { background: rgba(47,216,150,0.15); }
+    .verdict-meta { flex: 1; }
+    .verdict-eyebrow {
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; opacity: 0.6; margin-bottom: 0.1rem;
+    }
+    .verdict-label { font-size: 1.25rem; font-weight: 900; letter-spacing: -0.4px; }
+    .verdict-wrap.high   .verdict-eyebrow, .verdict-wrap.high   .verdict-label { color: var(--red);   }
+    .verdict-wrap.medium .verdict-eyebrow, .verdict-wrap.medium .verdict-label { color: var(--amber); }
+    .verdict-wrap.safe   .verdict-eyebrow, .verdict-wrap.safe   .verdict-label { color: var(--green); }
+    .verdict-score-col { text-align: right; flex-shrink: 0; }
+    .verdict-score-num { font-size: 2.2rem; font-weight: 900; letter-spacing: -2px; line-height: 1; }
+    .verdict-score-lbl { font-size: 0.65rem; font-weight: 600; color: var(--text-dim); }
+    .verdict-wrap.high   .verdict-score-num { color: var(--red);   }
+    .verdict-wrap.medium .verdict-score-num { color: var(--amber); }
+    .verdict-wrap.safe   .verdict-score-num { color: var(--green); }
+    .score-bar-track { height: 4px; background: rgba(255,255,255,0.04); }
+    .score-bar-fill  { height: 100%; width: 0%; transition: width 0.65s cubic-bezier(0.16,1,0.3,1); }
+    .verdict-wrap.high   .score-bar-fill { background: var(--red);   }
+    .verdict-wrap.medium .score-bar-fill { background: var(--amber); }
+    .verdict-wrap.safe   .score-bar-fill { background: var(--green); }
 
-    .verdict-icon {
-      font-size: 1.6rem;
-      flex-shrink: 0;
-      line-height: 1;
+    /* cached badge */
+    .cached-badge {
+      display: inline-flex; align-items: center; gap: 0.25rem;
+      font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--accent); background: var(--accent-dim);
+      border: 1px solid var(--border-hi); border-radius: 999px;
+      padding: 0.15rem 0.5rem; margin-left: 0.4rem; vertical-align: middle;
     }
-    .verdict-text-wrap { flex: 1; }
-    .verdict-label {
-      font-size: 0.7rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      opacity: 0.7;
-      margin-bottom: 0.1rem;
-    }
-    .verdict-value {
-      font-size: 1.25rem;
-      font-weight: 800;
-      letter-spacing: -0.3px;
-    }
-    .verdict-banner.high   .verdict-value,
-    .verdict-banner.high   .verdict-label  { color: var(--red);   }
-    .verdict-banner.medium .verdict-value,
-    .verdict-banner.medium .verdict-label  { color: var(--amber); }
-    .verdict-banner.safe   .verdict-value,
-    .verdict-banner.safe   .verdict-label  { color: var(--green); }
 
-    /* Score chip */
-    .score-chip {
-      text-align: right;
-      flex-shrink: 0;
+    /* ── Collapsible sections ───────────────────────────────────────── */
+    .report-section {
+      margin-top: 0.65rem;
+      border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden;
     }
-    .score-chip .score-num {
-      font-size: 2rem;
-      font-weight: 800;
-      line-height: 1;
-    }
-    .score-chip .score-denom {
-      font-size: 0.75rem;
-      opacity: 0.5;
-      font-weight: 600;
-    }
-    .verdict-banner.high   .score-num { color: var(--red);   }
-    .verdict-banner.medium .score-num { color: var(--amber); }
-    .verdict-banner.safe   .score-num { color: var(--green); }
-
-    /* Score bar */
-    .score-bar-wrap {
-      margin-top: 1rem;
-      background: var(--surface-2);
-      border-radius: 999px;
-      height: 5px;
-      overflow: hidden;
-      border: 1px solid var(--border);
-    }
-    .score-bar {
-      height: 100%;
-      border-radius: 999px;
-      width: 0%;
-      transition: width 0.6s cubic-bezier(0.16,1,0.3,1);
-    }
-    .score-bar.high   { background: var(--red);   }
-    .score-bar.medium { background: var(--amber); }
-    .score-bar.safe   { background: var(--green); }
-
-    /* Section headers */
     .section-header {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-top: 1.5rem;
-      margin-bottom: 0.75rem;
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--text-muted);
+      display: flex; align-items: center; gap: 0.65rem;
+      padding: 0.75rem 1rem; cursor: pointer;
+      background: var(--surface-2); user-select: none;
+      transition: background 0.15s;
     }
-    .section-header::after {
-      content: "";
-      flex: 1;
-      height: 1px;
-      background: var(--border);
+    .section-header:hover { background: var(--surface-3); }
+    .section-icon {
+      width: 28px; height: 28px; border-radius: 7px;
+      background: var(--surface-3); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.85rem; flex-shrink: 0;
     }
+    .section-title-text { flex: 1; }
+    .section-title-text strong {
+      display: block; font-size: 0.82rem; font-weight: 700; color: var(--text);
+    }
+    .section-title-text span {
+      font-size: 0.72rem; color: var(--text-dim);
+    }
+    .section-chevron {
+      color: var(--text-dim); transition: transform 0.2s; flex-shrink: 0;
+    }
+    .report-section.open .section-chevron { transform: rotate(180deg); }
+    .section-body {
+      display: none; padding: 1rem; border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .report-section.open .section-body { display: block; }
 
-    /* Reasons list */
-    .reasons-list {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
+    /* ── Section content components ─────────────────────────────────── */
+    .info-row {
+      display: flex; align-items: flex-start; gap: 0.5rem;
+      font-size: 0.82rem; padding: 0.35rem 0;
+      border-bottom: 1px solid var(--border);
     }
+    .info-row:last-child { border-bottom: none; }
+    .info-key { color: var(--text-dim); min-width: 140px; flex-shrink: 0; font-size: 0.78rem; }
+    .info-val { color: var(--text); flex: 1; word-break: break-all; }
+    .info-val.ok    { color: var(--green); }
+    .info-val.warn  { color: var(--amber); }
+    .info-val.bad   { color: var(--red);   }
+
+    /* auth badges */
+    .auth-grid { display: flex; flex-direction: column; gap: 0.5rem; }
+    .auth-item {
+      display: flex; align-items: flex-start; gap: 0.75rem;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 0.7rem 0.9rem;
+    }
+    .auth-badge {
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.07em; border-radius: 999px; padding: 0.18rem 0.55rem;
+      flex-shrink: 0; margin-top: 2px; border: 1px solid;
+      white-space: nowrap;
+    }
+    .auth-badge.pass { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
+    .auth-badge.fail { background: var(--red-bg);   color: var(--red);   border-color: var(--red-border);   }
+    .auth-badge.warn { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); }
+    .auth-badge.info { background: var(--surface-3); color: var(--text-sub); border-color: var(--border); }
+    .auth-detail { font-size: 0.8rem; color: var(--text-sub); line-height: 1.45; }
+    .auth-detail strong { color: var(--text); font-weight: 600; }
+
+    /* reasons list */
+    .reasons-list { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; }
     .reasons-list li {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.65rem;
-      font-size: 0.91rem;
-      color: var(--text);
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 0.65rem 0.9rem;
-      line-height: 1.5;
+      display: flex; align-items: flex-start; gap: 0.6rem;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 0.6rem 0.8rem;
+      font-size: 0.84rem; color: var(--text); line-height: 1.5;
     }
-    .reasons-list li::before {
-      content: "›";
-      color: var(--accent);
-      font-weight: 700;
-      font-size: 1rem;
-      line-height: 1.4;
-      flex-shrink: 0;
-    }
-    .no-reasons {
-      font-size: 0.88rem;
-      color: var(--text-dim);
-      font-style: italic;
-      padding: 0.5rem 0;
+    .reason-ico { flex-shrink: 0; margin-top: 1px; }
+
+    /* score breakdown */
+    .bd-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .bd-table tr { border-bottom: 1px solid var(--border); }
+    .bd-table tr:last-child { border-bottom: none; }
+    .bd-table td { padding: 0.45rem 0.35rem; vertical-align: top; }
+    .bd-sig { font-weight: 600; color: var(--text-sub); white-space: nowrap; padding-right: 0.65rem; width: 1%; }
+    .bd-pts { font-weight: 700; white-space: nowrap; text-align: right; padding-right: 0.65rem; width: 1%; }
+    .bd-pts.pos  { color: var(--red);   }
+    .bd-pts.zero { color: var(--green); }
+    .bd-det { color: var(--text-dim); font-size: 0.74rem; }
+
+    /* disclaimer box */
+    .disclaimer-box {
+      background: var(--surface-2); border: 1px solid var(--amber-border);
+      border-radius: var(--r-sm); padding: 0.7rem 0.9rem;
+      font-size: 0.82rem; color: var(--amber); line-height: 1.5;
+      display: flex; gap: 0.6rem; align-items: flex-start;
     }
 
-    /* URL block */
-    .url-block {
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 0.9rem 1rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      flex-wrap: wrap;
+    /* status pill (URL) */
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      padding: 0.18rem 0.6rem; border-radius: 999px;
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.07em; border: 1px solid; white-space: nowrap;
     }
-    .url-block .url-domain {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      word-break: break-all;
-      flex: 1;
-      min-width: 0;
-    }
-    .url-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.3rem;
-      padding: 0.25rem 0.7rem;
-      border-radius: 999px;
-      font-weight: 700;
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      flex-shrink: 0;
-      border: 1px solid;
-    }
-    .url-pill::before { content: "●"; font-size: 0.5rem; }
-    .url-pill.known-safe { background: var(--green-dim); color: var(--green); border-color: var(--green-border); }
-    .url-pill.suspicious { background: var(--red-dim);   color: var(--red);   border-color: var(--red-border);   }
-    .url-pill.unknown    { background: var(--amber-dim); color: var(--amber); border-color: var(--amber-border); }
+    .status-pill-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+    .status-pill.known-safe { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
+    .status-pill.suspicious { background: var(--red-bg);   color: var(--red);   border-color: var(--red-border);   }
+    .status-pill.unknown    { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); }
 
-    /* Error message */
-    #errorMsg {
-      margin-top: 1rem;
-      padding: 0.8rem 1rem;
-      border-radius: var(--radius-sm);
-      background: var(--red-dim);
-      color: var(--red);
-      font-size: 0.88rem;
-      border: 1px solid var(--red-border);
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
+    /* ── Footer ─────────────────────────────────────────────────────── */
+    .footer {
+      margin-top: 3rem; padding-top: 1.25rem; border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 0.5rem;
     }
-    #errorMsg::before { content: "⚠"; font-size: 0.9rem; flex-shrink: 0; }
+    .footer-brand { font-size: 0.78rem; font-weight: 700; color: var(--text-sub); }
+    .footer-brand span { color: var(--accent); }
+    .footer-made { font-size: 0.7rem; color: var(--text-dim); }
+    .footer-made strong { color: var(--text-sub); font-weight: 600; }
+    .footer-disc { width: 100%; font-size: 0.68rem; color: var(--text-dim); }
 
-    /* ── Stats row ────────────────────────────────────────────────────── */
-    .stats-row {
-      display: flex;
-      gap: 0.75rem;
-      margin-top: 1.5rem;
-      flex-wrap: wrap;
+    @media (max-width: 520px) {
+      .card { padding: 1.2rem; }
+      .hero { padding: 2.25rem 0 1.75rem; }
+      .hero h1 { font-size: 1.8rem; }
+      .info-key { min-width: 100px; }
     }
-    .stat-chip {
-      flex: 1;
-      min-width: 120px;
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 0.75rem 1rem;
-      font-size: 0.78rem;
-      color: var(--text-muted);
-      display: flex;
-      flex-direction: column;
-      gap: 0.2rem;
-    }
-    .stat-chip strong {
-      font-size: 1rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    /* ── Footer ───────────────────────────────────────────────────────── */
-    footer {
-      margin-top: 3rem;
-      font-size: 0.75rem;
-      color: var(--text-dim);
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      gap: 0.3rem;
-      align-items: center;
-    }
-    footer .footer-links {
-      display: flex;
-      gap: 1.25rem;
-    }
-    footer span { opacity: 0.5; }
   </style>
 </head>
 <body>
+<div class="page">
 
-  <!-- ── Top nav ──────────────────────────────────────────────────────── -->
-  <nav class="topbar">
-    <div class="logo">
-      <div class="logo-icon">🛡</div>
-      <span class="logo-text">Scam<span>Shield</span></span>
-    </div>
-    <span class="badge-ai">AI Powered</span>
-  </nav>
+  <!-- Header -->
+  <header class="header">
+    <a class="logo" href="#">
+      <div class="logo-icon">
+        <svg width="19" height="21" viewBox="0 0 20 22" fill="none">
+          <path d="M10 1L2 4.5V10C2 14.97 5.46 19.59 10 21C14.54 19.59 18 14.97 18 10V4.5L10 1Z"
+                fill="#1a3a6e" stroke="#3b8ef3" stroke-width="1.4" stroke-linejoin="round"/>
+          <path d="M7 10.5L9 12.5L13 8.5" stroke="#3b8ef3" stroke-width="1.6"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="logo-name">Scam<em>Shield</em></span>
+    </a>
+    <span class="header-right">Made by Team Doers</span>
+  </header>
 
-  <!-- ── Hero ─────────────────────────────────────────────────────────── -->
-  <div class="hero">
-    <h1>Is this message a <em>scam?</em></h1>
-    <p>Paste any suspicious SMS, email, or link. Our AI analyzes it for threats, lookalike URLs, and fraud patterns in seconds.</p>
-  </div>
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Paste a message.<br><span>We check if it's real.</span></h1>
+    <p class="hero-sub">AI analysis · URL forensics · Email authentication</p>
+  </section>
 
-  <!-- ── Main card ─────────────────────────────────────────────────────── -->
-  <div class="card">
-    <div class="input-label">
-      <span class="dot"></span>
-      Message or URL to analyze
-    </div>
-    <textarea
-      id="messageInput"
-      placeholder="Paste a suspicious message here — e.g. &quot;Dear customer, your MSEDCL bill is overdue. Pay now or your connection will be cut: http://msedcl-pay.site&quot;"
-    ></textarea>
-    <div class="hint-row">
-      <span>Supports SMS, email snippets, and raw URLs</span>
-      <span>Ctrl + Enter to analyze</span>
-    </div>
+  <div id="singlePanel">
+    <div class="card">
 
-    <button id="analyzeBtn" onclick="analyzeMessage()">Analyze Message</button>
+      <!-- Message type toggle -->
+      <div class="type-row">
+        <span style="font-size:0.72rem;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Message type</span>
+        <button class="type-btn active" id="btnSMS"   onclick="setMsgType('sms')">
+          <span class="type-dot"></span> SMS
+        </button>
+        <button class="type-btn"        id="btnEmail" onclick="setMsgType('email')">
+          <span class="type-dot"></span> Email
+        </button>
+      </div>
 
-    <!-- Loading -->
-    <div id="loadingSpinner" class="spinner-wrap hidden">
-      <div class="spinner"></div>
-      <span>Running AI analysis &amp; URL checks…</span>
-    </div>
-
-    <!-- Error -->
-    <div id="errorMsg" class="hidden"></div>
-
-    <!-- ── Result ─────────────────────────────────────────────────────── -->
-    <div id="resultCard" class="hidden">
-      <hr class="divider" />
-
-      <!-- Verdict banner -->
-      <div id="verdictBanner" class="verdict-banner">
-        <div id="verdictIcon" class="verdict-icon"></div>
-        <div class="verdict-text-wrap">
-          <div class="verdict-label">Verdict</div>
-          <div id="verdictValue" class="verdict-value"></div>
-        </div>
-        <div class="score-chip">
-          <div id="scoreValue" class="score-num"></div>
-          <div class="score-denom">/ 100</div>
+      <!-- Sender email (email mode only) -->
+      <div id="emailSenderWrap" class="hidden">
+        <div class="field-label"><span class="field-label-dot"></span> Sender email address</div>
+        <input type="email" id="senderEmailInput"
+               placeholder="e.g. alerts@hdfc-notice-update.com" autocomplete="off" />
+        <div style="margin-top:0.35rem;font-size:0.7rem;color:var(--text-dim);">
+          Paste the exact From: address — used to check SPF/DKIM/DMARC records
         </div>
       </div>
 
-      <!-- Score bar -->
-      <div class="score-bar-wrap">
-        <div id="scoreBar" class="score-bar"></div>
+      <!-- Message textarea -->
+      <div class="field-label" style="margin-top:0.9rem">
+        <span class="field-label-dot"></span> Message to analyze
+      </div>
+      <textarea id="messageInput"
+        placeholder="Paste a suspicious message here — e.g. &quot;Dear customer, your MSEDCL bill is overdue. Pay ₹2,340 now or your electricity will be disconnected: http://msedcl-pay.site/pay&quot;"
+        autocomplete="off" spellcheck="false"></textarea>
+      <div class="input-meta">
+        <span>Supports SMS, email, WhatsApp, or raw URLs</span>
+        <span>Ctrl+Enter to run</span>
       </div>
 
-      <!-- Quick stats row -->
-      <div class="stats-row">
-        <div class="stat-chip">
-          <span>Text analysis</span>
-          <strong id="statText">—</strong>
-        </div>
-        <div class="stat-chip">
-          <span>URL detected</span>
-          <strong id="statUrl">—</strong>
-        </div>
-        <div class="stat-chip">
-          <span>URL status</span>
-          <strong id="statUrlStatus">—</strong>
-        </div>
+      <!-- Validation -->
+      <div id="validationMsg" class="inline-msg warn hidden">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+          <circle cx="7" cy="7" r="6" stroke="#f5a623" stroke-width="1.3"/>
+          <path d="M7 4.5v3M7 9.5v.01" stroke="#f5a623" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        Please paste a message to analyze.
       </div>
 
-      <!-- Reasons -->
-      <div class="section-header">Detection details</div>
-      <ul id="reasonsList" class="reasons-list"></ul>
-      <div id="noReasons" class="no-reasons hidden">No specific patterns identified. Message appears clean.</div>
+      <!-- Analyze button -->
+      <button class="analyze-btn" id="analyzeBtn" onclick="analyzeSingle()">
+        <span id="btnLabel">Analyze Message</span>
+        <svg class="btn-arrow" id="btnIcon" width="15" height="15" viewBox="0 0 16 16" fill="none">
+          <path d="M3 8h10M9 4l4 4-4 4" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span id="btnSpinner" class="spinner hidden"></span>
+      </button>
 
-      <!-- URL block -->
-      <div id="urlSection" class="hidden">
-        <div class="section-header">URL found</div>
-        <div class="url-block">
-          <div id="urlValue" class="url-domain"></div>
-          <span id="urlPill" class="url-pill"></span>
-        </div>
+      <!-- Error -->
+      <div id="errorMsg" class="inline-msg err hidden">
+        <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
+          <circle cx="7.5" cy="7.5" r="6.5" stroke="#f04f5a" stroke-width="1.2"/>
+          <path d="M7.5 4.5v3.5M7.5 10v.01" stroke="#f04f5a" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        <span id="errorText"></span>
       </div>
+
+      <!-- ══ INVESTIGATION REPORT ══ -->
+      <div id="reportCard" class="hidden">
+
+        <!-- Final verdict (always visible, not collapsible) -->
+        <div id="verdictWrap" class="verdict-wrap" style="margin-top:1.1rem">
+          <div class="verdict-top">
+            <div class="verdict-icon-box"><span id="verdictIcon"></span></div>
+            <div class="verdict-meta">
+              <div class="verdict-eyebrow">Final Verdict</div>
+              <div id="verdictLabel" class="verdict-label"></div>
+            </div>
+            <div class="verdict-score-col">
+              <div id="verdictScore" class="verdict-score-num"></div>
+              <div class="verdict-score-lbl">Risk Score / 100</div>
+            </div>
+          </div>
+          <div class="score-bar-track">
+            <div id="scoreBarFill" class="score-bar-fill"></div>
+          </div>
+        </div>
+
+        <!-- Section 1: Sender Analysis -->
+        <div class="report-section" id="secSender">
+          <div class="section-header" onclick="toggleSection('secSender')">
+            <div class="section-icon">📱</div>
+            <div class="section-title-text">
+              <strong>Sender Analysis</strong>
+              <span id="secSenderSummary">—</span>
+            </div>
+            <svg class="section-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M3 5l4 4 4-4" stroke="#3d4f6e" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="section-body" id="secSenderBody"></div>
+        </div>
+
+        <!-- Section 2: Content Analysis -->
+        <div class="report-section" id="secContent">
+          <div class="section-header" onclick="toggleSection('secContent')">
+            <div class="section-icon">🔍</div>
+            <div class="section-title-text">
+              <strong>Content Analysis</strong>
+              <span id="secContentSummary">—</span>
+            </div>
+            <svg class="section-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M3 5l4 4 4-4" stroke="#3d4f6e" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="section-body" id="secContentBody"></div>
+        </div>
+
+        <!-- Section 3: Link Forensics -->
+        <div class="report-section" id="secLink">
+          <div class="section-header" onclick="toggleSection('secLink')">
+            <div class="section-icon">🔗</div>
+            <div class="section-title-text">
+              <strong>Link Forensics</strong>
+              <span id="secLinkSummary">—</span>
+            </div>
+            <svg class="section-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M3 5l4 4 4-4" stroke="#3d4f6e" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="section-body" id="secLinkBody"></div>
+        </div>
+
+        <!-- Section 4: Score Breakdown -->
+        <div class="report-section" id="secScore">
+          <div class="section-header" onclick="toggleSection('secScore')">
+            <div class="section-icon">📊</div>
+            <div class="section-title-text">
+              <strong>Score Breakdown</strong>
+              <span id="secScoreSummary">—</span>
+            </div>
+            <svg class="section-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M3 5l4 4 4-4" stroke="#3d4f6e" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="section-body" id="secScoreBody"></div>
+        </div>
+
+      </div><!-- /reportCard -->
+    </div><!-- /card -->
+  </div><!-- /singlePanel -->
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div>
+      <div class="footer-brand">Scam<span>Shield</span></div>
+      <div class="footer-made">Made by <strong>Team Doers</strong></div>
     </div>
-  </div>
-
-  <!-- ── Footer ────────────────────────────────────────────────────────── -->
-  <footer>
-    <span>ScamShield — AI-powered fraud detection. For awareness only, not legal advice.</span>
+    <div class="footer-disc">For awareness only. Not legal or financial advice.</div>
   </footer>
 
-  <script>
-    const API_BASE = "http://127.0.0.1:8000";
+</div><!-- /page -->
 
-    async function analyzeMessage() {
-      const message = document.getElementById("messageInput").value.trim();
+<script>
+  const API_BASE = "http://127.0.0.1:8000";
+  let currentMsgType = "sms";
 
-      if (!message) {
-        showError("Please paste a message to analyze.");
-        return;
+  /* ── Message type toggle ───────────────────────────────────────── */
+  function setMsgType(type) {
+    currentMsgType = type;
+    document.getElementById("btnSMS").classList.toggle("active", type === "sms");
+    document.getElementById("btnEmail").classList.toggle("active", type === "email");
+    document.getElementById("emailSenderWrap").classList.toggle("hidden", type !== "email");
+  }
+
+  /* ── Collapsible sections ──────────────────────────────────────── */
+  function toggleSection(id) {
+    document.getElementById(id).classList.toggle("open");
+  }
+  function openSection(id) {
+    document.getElementById(id).classList.add("open");
+  }
+
+  /* ── Keyboard shortcut ─────────────────────────────────────────── */
+  document.getElementById("messageInput").addEventListener("keydown", e => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) analyzeSingle();
+  });
+  document.getElementById("messageInput").addEventListener("input", () => {
+    document.getElementById("validationMsg").classList.add("hidden");
+  });
+
+  /* ═══════════════════════════════════════════════════════════════
+     SINGLE ANALYSIS
+  ═══════════════════════════════════════════════════════════════ */
+  async function analyzeSingle() {
+    const message     = document.getElementById("messageInput").value.trim();
+    const senderEmail = document.getElementById("senderEmailInput").value.trim();
+
+    if (!message) {
+      document.getElementById("validationMsg").classList.remove("hidden");
+      return;
+    }
+    document.getElementById("validationMsg").classList.add("hidden");
+    hideError(); setLoading(true);
+    document.getElementById("reportCard").classList.add("hidden");
+
+    try {
+      const res = await fetch(`${API_BASE}/analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message,
+          message_type: currentMsgType,
+          sender_email: senderEmail || null,
+        }),
+      });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.detail || `Server error ${res.status}`);
+      }
+      renderReport(await res.json());
+    } catch (err) {
+      showError(err.message.includes("Failed to fetch")
+        ? "Could not reach the backend. Is the server running on port 8000?"
+        : err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     RENDER INVESTIGATION REPORT
+  ═══════════════════════════════════════════════════════════════ */
+  function renderReport(data) {
+    const { verdict, score, score_breakdown, reasons, url_found, url_status,
+            sender_analysis, email_auth, domain_forensics, cached,
+            text_categories } = data;
+
+    const cls  = verdict === "HIGH RISK" ? "high" : verdict === "MEDIUM RISK" ? "medium" : "safe";
+    const icon = verdict === "HIGH RISK" ? "🚨" : verdict === "MEDIUM RISK" ? "⚠️" : "✅";
+
+    // Verdict banner
+    document.getElementById("verdictWrap").className = `verdict-wrap ${cls}`;
+    document.getElementById("verdictIcon").textContent  = icon;
+    document.getElementById("verdictLabel").textContent = verdict
+      + (cached ? ' <span class="cached-badge">⚡ Cached</span>' : "");
+    document.getElementById("verdictLabel").innerHTML = verdict
+      + (cached ? ' <span class="cached-badge">⚡ Cached</span>' : "");
+    document.getElementById("verdictScore").textContent = score;
+
+    // Score bar
+    const fill = document.getElementById("scoreBarFill");
+    fill.style.width = "0%";
+    setTimeout(() => { fill.style.width = `${score}%`; }, 80);
+
+    // ── Section 1: Sender Analysis ──────────────────────────────── //
+    const senderBody = document.getElementById("secSenderBody");
+    const senderSum  = document.getElementById("secSenderSummary");
+
+    if (sender_analysis?.type === "sms") {
+      senderSum.textContent = "SMS — sender ID unverifiable";
+      senderBody.innerHTML = `
+        <div class="disclaimer-box">
+          <span>⚠️</span>
+          <span>${sender_analysis.disclaimer}</span>
+        </div>`;
+    } else if (sender_analysis?.type === "email") {
+      const domain = sender_analysis.sender_domain || "unknown";
+      const risk   = email_auth?.overall_risk || "unknown";
+      const riskColor = risk === "low" ? "ok" : risk === "medium" ? "warn" : "bad";
+      senderSum.textContent = `Email from ${domain} · Auth risk: ${risk.toUpperCase()}`;
+
+      let authHtml = "";
+      if (email_auth && !email_auth.error) {
+        const spf   = email_auth.spf;
+        const dmarc = email_auth.dmarc;
+        const dkim  = email_auth.dkim;
+        authHtml = `
+          <div class="auth-grid">
+            <div class="auth-item">
+              <span class="auth-badge ${spf.found && spf.pass ? 'pass' : spf.found ? 'warn' : 'fail'}">
+                SPF ${spf.found ? (spf.pass ? '✓' : '~') : '✗'}
+              </span>
+              <div class="auth-detail">
+                <strong>${spf.found ? (spf.pass ? "Pass" : "Weak") : "Not found"}</strong>
+                ${spf.note ? `<br>${spf.note}` : ""}
+                ${spf.record ? `<br><code style="font-size:0.73rem;color:var(--text-dim)">${truncate(spf.record, 80)}</code>` : ""}
+              </div>
+            </div>
+            <div class="auth-item">
+              <span class="auth-badge ${dmarc.found && dmarc.policy !== 'none' ? 'pass' : dmarc.found ? 'warn' : 'fail'}">
+                DMARC ${dmarc.found ? (dmarc.policy !== 'none' ? '✓' : '~') : '✗'}
+              </span>
+              <div class="auth-detail">
+                <strong>${dmarc.found ? `Policy: ${dmarc.policy || "?"}` : "Not found"}</strong>
+                ${dmarc.note ? `<br>${dmarc.note}` : ""}
+              </div>
+            </div>
+            <div class="auth-item">
+              <span class="auth-badge ${dkim.found ? 'pass' : 'warn'}">
+                DKIM ${dkim.found ? '✓' : '?'}
+              </span>
+              <div class="auth-detail">
+                <strong>${dkim.found ? `Found (selector: ${dkim.selector})` : "Not found with common selectors"}</strong>
+                ${dkim.note ? `<br>${dkim.note}` : ""}
+              </div>
+            </div>
+          </div>`;
+      } else if (email_auth?.error) {
+        authHtml = `<div style="font-size:0.8rem;color:var(--text-dim)">${email_auth.error}</div>`;
+      } else {
+        authHtml = `<div style="font-size:0.8rem;color:var(--text-dim)">No email authentication data.</div>`;
       }
 
-      hideError();
-      setLoading(true);
-      document.getElementById("resultCard").classList.add("hidden");
+      senderBody.innerHTML = `
+        <div class="info-row"><span class="info-key">Sender address</span><span class="info-val">${sender_analysis.sender_email || "—"}</span></div>
+        <div class="info-row"><span class="info-key">Domain</span><span class="info-val">${domain}</span></div>
+        <div class="info-row"><span class="info-key">Auth risk</span><span class="info-val ${riskColor}">${risk.toUpperCase()}</span></div>
+        <div style="margin-top:0.75rem">${authHtml}</div>`;
+    } else {
+      senderSum.textContent = "No sender info";
+      senderBody.innerHTML = `<div style="font-size:0.8rem;color:var(--text-dim)">No sender information available.</div>`;
+    }
 
-      try {
-        const response = await fetch(`${API_BASE}/analyze`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message }),
-        });
+    // ── Section 2: Content Analysis ─────────────────────────────── //
+    const contentBody = document.getElementById("secContentBody");
+    const contentSum  = document.getElementById("secContentSummary");
 
-        if (!response.ok) {
-          const err = await response.json().catch(() => ({}));
-          throw new Error(err.detail || `Server error: ${response.status}`);
+    if (reasons && reasons.length > 0) {
+      contentSum.textContent = `${reasons.length} pattern(s) detected`;
+      const warnSvg = `<svg class="reason-ico" width="13" height="13" viewBox="0 0 13 13" fill="none">
+        <path d="M6.5 1.5L1 11h11L6.5 1.5Z" stroke="#f5a623" stroke-width="1.2" stroke-linejoin="round"/>
+        <path d="M6.5 5.5v2.5M6.5 9.5v.01" stroke="#f5a623" stroke-width="1.3" stroke-linecap="round"/>
+      </svg>`;
+      contentBody.innerHTML = `<ul class="reasons-list">${
+        reasons.map(r => `<li>${warnSvg}<span>${r}</span></li>`).join("")
+      }</ul>`;
+    } else {
+      contentSum.textContent = "No suspicious patterns";
+      contentBody.innerHTML = `<div style="font-size:0.82rem;color:var(--text-dim);font-style:italic">No suspicious content patterns detected.</div>`;
+    }
+
+    // Show fired categories if any
+    if (text_categories) {
+      const cats = Object.entries(text_categories).filter(([,v]) => v);
+      if (cats.length > 0) {
+        const catLabels = {
+          urgency_threats:"Urgency / Threats", otp_pin_request:"OTP / Credential Request",
+          brand_impersonation:"Brand Impersonation", sender_mismatch:"Sender Mismatch",
+          grammar_tone:"Grammar / Tone", unusual_payment_channel:"Unusual Payment Channel",
+          unsolicited_offer:"Unsolicited Offer", do_not_share:'"Do Not Share" Phrasing'
+        };
+        contentBody.innerHTML += `<div style="margin-top:0.75rem;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-dim);margin-bottom:0.4rem">Detected categories</div>
+          <div style="display:flex;flex-wrap:wrap;gap:0.35rem">${
+          cats.map(([k]) => `<span style="background:var(--red-bg);border:1px solid var(--red-border);color:var(--red);border-radius:999px;padding:.15rem .55rem;font-size:.68rem;font-weight:700">${catLabels[k]||k}</span>`).join("")
+        }</div>`;
+      }
+    }
+
+    // ── Section 3: Link Forensics ────────────────────────────────── //
+    const linkBody = document.getElementById("secLinkBody");
+    const linkSum  = document.getElementById("secLinkSummary");
+
+    if (!url_found) {
+      linkSum.textContent = "No URL detected";
+      linkBody.innerHTML = `<div style="font-size:0.82rem;color:var(--text-dim);font-style:italic">No URL found in this message.</div>`;
+    } else {
+      const pmap = { "known-safe":"known-safe", "suspicious":"suspicious", "unknown":"unknown" };
+      const pc   = pmap[url_status] || "unknown";
+      const plbl = { "known-safe":"Known Safe","suspicious":"Suspicious","unknown":"Unknown" }[url_status] || url_status;
+      linkSum.textContent = `${url_found.length > 50 ? url_found.slice(0,50)+"…" : url_found} · ${plbl}`;
+
+      let html = `<div class="info-row"><span class="info-key">URL</span>
+        <span class="info-val" style="font-family:monospace;font-size:0.8rem">${url_found}</span></div>
+        <div class="info-row"><span class="info-key">Status</span>
+        <span class="info-val"><span class="status-pill ${pc}"><span class="status-pill-dot"></span>${plbl}</span></span></div>`;
+
+      if (domain_forensics) {
+        const w = domain_forensics.whois_info || {};
+        const s = domain_forensics.ssl_info   || {};
+        const h = domain_forensics.hosting_info || {};
+
+        html += `<div class="info-row"><span class="info-key">Registrar</span>
+          <span class="info-val ${!w.registrar ? 'warn' : ''}">${w.registrar || "Unavailable"}</span></div>`;
+        html += `<div class="info-row"><span class="info-key">Registrant org</span>
+          <span class="info-val ${w.privacy_redacted ? 'warn' : ''}">${w.registrant_org || (w.privacy_redacted ? "REDACTED FOR PRIVACY" : "Unavailable")}</span></div>`;
+        html += `<div class="info-row"><span class="info-key">Domain age</span>
+          <span class="info-val ${w.age_days !== null && w.age_days < 90 ? 'bad' : 'ok'}">${w.age_days !== null ? `${w.age_days} days` : "Unknown"}</span></div>`;
+
+        if (domain_forensics.privacy_age_flag) {
+          html += `<div class="info-row"><span class="info-key">Privacy + age</span>
+            <span class="info-val bad">${domain_forensics.privacy_age_note}</span></div>`;
         }
 
-        renderResult(await response.json());
+        html += `<div class="info-row"><span class="info-key">SSL issuer</span>
+          <span class="info-val">${s.issuer || s.error || "Unavailable"}</span></div>`;
+        html += `<div class="info-row"><span class="info-key">SSL issued</span>
+          <span class="info-val ${s.is_new ? 'bad' : ''}">${s.issue_date || "Unknown"}${s.is_new ? ` (${s.age_days}d ago — new)` : ""}</span></div>`;
 
-      } catch (err) {
-        showError(
-          err.message.includes("Failed to fetch")
-            ? "Could not reach the backend. Make sure the server is running on port 8000."
-            : `Error: ${err.message}`
-        );
-      } finally {
-        setLoading(false);
+        html += `<div class="info-row"><span class="info-key">Hosting IP</span>
+          <span class="info-val">${h.ip || "Unknown"}</span></div>`;
+        html += `<div class="info-row"><span class="info-key">Hosting / ASN</span>
+          <span class="info-val">${h.asn_desc ? `${h.asn_desc} (${h.country || "?"})` : (h.error || "Unknown")}</span></div>`;
+
+        if (domain_forensics.hosting_flag) {
+          html += `<div class="info-row"><span class="info-key">Hosting flag</span>
+            <span class="info-val bad">${domain_forensics.hosting_note}</span></div>`;
+        }
+        if (domain_forensics.ssl_flag) {
+          html += `<div class="info-row"><span class="info-key">SSL flag</span>
+            <span class="info-val bad">${domain_forensics.ssl_note}</span></div>`;
+        }
       }
+      linkBody.innerHTML = html;
     }
 
-    document.getElementById("messageInput").addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && e.ctrlKey) analyzeMessage();
-    });
+    // ── Section 4: Score Breakdown ───────────────────────────────── //
+    const scoreBody = document.getElementById("secScoreBody");
+    const scoreSum  = document.getElementById("secScoreSummary");
+    scoreSum.textContent = `Total: ${score}/100`;
 
-    /* ── Render ──────────────────────────────────────────────────────── */
-    function renderResult(data) {
-      const { verdict, score, reasons, url_found, url_status } = data;
-
-      const cls  = verdict === "HIGH RISK" ? "high" : verdict === "MEDIUM RISK" ? "medium" : "safe";
-      const icon = verdict === "HIGH RISK" ? "🚨" : verdict === "MEDIUM RISK" ? "⚠️" : "✅";
-
-      // Verdict banner
-      const banner = document.getElementById("verdictBanner");
-      banner.className = `verdict-banner ${cls}`;
-      document.getElementById("verdictIcon").textContent  = icon;
-      document.getElementById("verdictValue").textContent = verdict;
-      document.getElementById("scoreValue").textContent   = score;
-
-      // Score bar
-      const bar = document.getElementById("scoreBar");
-      bar.className = `score-bar ${cls}`;
-      setTimeout(() => { bar.style.width = `${score}%`; }, 60);
-
-      // Quick stats
-      const textFlag = reasons && reasons.length > 0;
-      document.getElementById("statText").textContent = textFlag ? "Patterns found" : "No patterns";
-      document.getElementById("statText").style.color = textFlag ? "var(--red)" : "var(--green)";
-
-      document.getElementById("statUrl").textContent = url_found ? "Yes" : "None";
-      document.getElementById("statUrl").style.color = url_found ? "var(--amber)" : "var(--text-muted)";
-
-      const statusLabels = { "known-safe": "✓ Known Safe", "suspicious": "✗ Suspicious", "unknown": "? Unknown" };
-      const statusColors = { "known-safe": "var(--green)", "suspicious": "var(--red)", "unknown": "var(--amber)" };
-      document.getElementById("statUrlStatus").textContent = url_status ? (statusLabels[url_status] || url_status) : "N/A";
-      document.getElementById("statUrlStatus").style.color = url_status ? (statusColors[url_status] || "var(--text-muted)") : "var(--text-dim)";
-
-      // Reasons
-      const list = document.getElementById("reasonsList");
-      const noReasons = document.getElementById("noReasons");
-      list.innerHTML = "";
-      if (reasons && reasons.length > 0) {
-        noReasons.classList.add("hidden");
-        reasons.forEach((r) => {
-          const li = document.createElement("li");
-          li.textContent = r;
-          list.appendChild(li);
-        });
-      } else {
-        noReasons.classList.remove("hidden");
-      }
-
-      // URL block
-      const urlSection = document.getElementById("urlSection");
-      if (url_found) {
-        urlSection.classList.remove("hidden");
-        document.getElementById("urlValue").textContent = url_found;
-        const pill = document.getElementById("urlPill");
-        const pillMap = {
-          "known-safe": { label: "Known Safe", cls: "known-safe" },
-          "suspicious":  { label: "Suspicious",  cls: "suspicious" },
-          "unknown":     { label: "Unknown",      cls: "unknown" },
-        };
-        const p = pillMap[url_status] || { label: url_status || "—", cls: "unknown" };
-        pill.className = `url-pill ${p.cls}`;
-        pill.textContent = p.label;
-      } else {
-        urlSection.classList.add("hidden");
-      }
-
-      document.getElementById("resultCard").classList.remove("hidden");
-      document.getElementById("resultCard").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if (score_breakdown && score_breakdown.length > 0) {
+      const rows = score_breakdown.map(({signal, points, detail}) => `
+        <tr>
+          <td class="bd-sig">${signal}</td>
+          <td class="bd-pts ${points > 0 ? 'pos' : 'zero'}">${points > 0 ? '+'+points : '✓ 0'}</td>
+          <td class="bd-det">${detail || ""}</td>
+        </tr>`).join("");
+      scoreBody.innerHTML = `<table class="bd-table">${rows}</table>`;
+    } else {
+      scoreBody.innerHTML = `<div style="font-size:0.82rem;color:var(--text-dim)">No breakdown available.</div>`;
     }
 
-    function setLoading(on) {
-      const btn = document.getElementById("analyzeBtn");
-      btn.disabled = on;
-      btn.textContent = on ? "Analyzing…" : "Analyze Message";
-      document.getElementById("loadingSpinner").classList.toggle("hidden", !on);
+    // Show report, auto-open high-risk sections
+    document.getElementById("reportCard").classList.remove("hidden");
+    if (verdict !== "LIKELY SAFE") {
+      openSection("secContent");
+      if (url_found) openSection("secLink");
     }
+    setTimeout(() => {
+      document.getElementById("reportCard").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 60);
+  }
 
-    function showError(msg) {
-      const el = document.getElementById("errorMsg");
-      el.textContent = msg;
-      el.classList.remove("hidden");
-    }
-
-    function hideError() {
-      document.getElementById("errorMsg").classList.add("hidden");
-    }
-  </script>
+  /* ── Helpers ───────────────────────────────────────────────────── */
+  function setLoading(on) {
+    const btn = document.getElementById("analyzeBtn");
+    btn.disabled = on;
+    document.getElementById("btnLabel").textContent = on ? "Analyzing…" : "Analyze Message";
+    document.getElementById("btnIcon").classList.toggle("hidden", on);
+    document.getElementById("btnSpinner").classList.toggle("hidden", !on);
+  }
+  function showError(msg) {
+    document.getElementById("errorText").textContent = msg;
+    document.getElementById("errorMsg").classList.remove("hidden");
+  }
+  function hideError() {
+    document.getElementById("errorMsg").classList.add("hidden");
+  }
+  function truncate(s, n) { return s.length > n ? s.slice(0,n) + "…" : s; }
+</script>
 </body>
 </html>
